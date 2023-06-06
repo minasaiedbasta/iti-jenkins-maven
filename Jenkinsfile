@@ -1,45 +1,22 @@
-#!/usr/bin/env groovy
 pipeline {
     agent any
-    tools {
-        maven 'Maven'
-    }
+    
     stages {
-        stage("Build jar App") {
+        stage('Build and Push Docker Image') {
+            when {
+                branch 'release'
+            }
             steps {
-                script {
-                    echo "building application..."
-                    sh "mvn package"
-                }
+                echo 'Build and push the Docker image'
             }
         }
-        stage("Build Docker Image") {
-            steps {
-                when {
-                    expression {
-                        branch 'release'
-                    }
-                }
-                script {
-                    echo "building docker image..."
-                    withCredentials ([usernamePassword(credentialsId:'dockerhub',usernameVariable: 'USER',passwordVariable:'PASS')]) {
-                        sh "docker build -t minasaiedbasta/demo-maven-app:jma-3.0 ."
-                        sh 'echo $PASS | docker login -u $USER --password-stdin'
-                        sh "docker push minasaiedbasta/demo-maven-app:jma-3.0"
-                    }
-                }
+        
+        stage('Deploy Docker Image') {
+            when {
+                branch 'dev' || branch 'test' || branch 'prod'
             }
-        }
-        stage("Deploy Image") {
             steps {
-                when {
-                    expression {
-                        branch 'dev', 'test', 'prod'
-                    }
-                }
-                script {
-                    echo "deploying application..."
-                }
+                echo 'Deploy the released Docker image'
             }
         }
     }
