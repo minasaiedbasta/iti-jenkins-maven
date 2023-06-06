@@ -1,27 +1,42 @@
 #!/usr/bin/env groovy
-@Library('jenkins-shared-library')_
 pipeline {
     agent any
     tools {
         maven 'Maven'
     }
     stages {
-        stage("build jar") {
+        stage("Build jar App") {
             steps {
                 script {
-                    buildJar()
+                    echo "building application..."
+                    sh "mvn package"
                 }
             }
         }
-        stage("build image") {
+        stage("Build Docker Image") {
             steps {
+                when {
+                    expression {
+                        branch 'release'
+                    }
+                }
                 script {
-                    buildImage 'minasaiedbasta/demo-maven-app:jma-3.0'
+                    echo "building docker image..."
+                    withCredentials ([usernamePassword(credentialsId:'dockerhub',usernameVariable: 'USER',passwordVariable:'PASS')]) {
+                        sh "docker build -t minasaiedbasta/demo-maven-app:jma-3.0 ."
+                        sh 'echo $PASS | docker login -u $USER --password-stdin'
+                        sh "docker push minasaiedbasta/demo-maven-app:jma-3.0"
+                    }
                 }
             }
         }
-        stage("deploy") {
+        stage("Deploy Image") {
             steps {
+                when {
+                    expression {
+                        branch 'dev', 'test', 'prod'
+                    }
+                }
                 script {
                     echo "deploying application..."
                 }
